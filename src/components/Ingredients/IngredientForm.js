@@ -1,12 +1,15 @@
-import React from 'react'
+import React, {useState} from 'react'
 
 import Card from '../UI/Card'
 import styles from './IngredientForm.module.scss'
 
-const IngredientForm = React.memo((props) => {
+const IngredientForm = ({title, amount, onAddIngredient}) => {
+  const [inputTitle, setInputTitle] = useState(title || '')
+  const [inputAmount, setInputAmount] = useState(amount || '')
+
   const submitHandler = (event) => {
     event.preventDefault()
-    // ...
+    onAddIngredient({title: inputTitle, amount: inputAmount})
   }
 
   return (
@@ -15,11 +18,21 @@ const IngredientForm = React.memo((props) => {
         <form onSubmit={submitHandler}>
           <div className={styles['form-control']}>
             <label htmlFor="title">Name</label>
-            <input type="text" id="title" />
+            <input
+              type="text"
+              id="title"
+              value={inputTitle}
+              onChange={(event) => setInputTitle(event.target.value)}
+            />
           </div>
           <div className={styles['form-control']}>
             <label htmlFor="amount">Amount</label>
-            <input type="number" id="amount" />
+            <input
+              type="number"
+              id="amount"
+              value={inputAmount}
+              onChange={(event) => setInputAmount(event.target.value)}
+            />
           </div>
           <div className={styles['ingredient-form__actions']}>
             <button type="submit">Add Ingredient</button>
@@ -28,6 +41,6 @@ const IngredientForm = React.memo((props) => {
       </Card>
     </section>
   )
-})
+}
 
-export default IngredientForm
+export default React.memo(IngredientForm)

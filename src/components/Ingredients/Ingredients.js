@@ -1,12 +1,25 @@
-import React, {useState, useCallback} from 'react'
+import React, {useReducer, useState, useCallback} from 'react'
 
 import IngredientForm from './IngredientForm'
 import IngredientList from './IngredientList'
 import Search from './Search'
 import ErrorModal from '../UI/ErrorModal'
 
+const ingredientReducer = (currentIngredients, action) => {
+  switch (action.type) {
+    case 'SET':
+      return action.payload.ingredients
+    case 'ADD':
+      return [...currentIngredients, action.payload.ingredient]
+    case 'DELETE':
+      return currentIngredients.filter((ing) => ing.id !== action.payload.id)
+    default:
+      throw new Error('Should not get there!')
+  }
+}
+
 const Ingredients = () => {
-  const [ingredientList, setIngredientList] = useState([])
+  const [ingredientList, dispatch] = useReducer(ingredientReducer, [])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState()
 
@@ -20,7 +33,12 @@ const Ingredients = () => {
       .then((res) => {
         const data = res.json()
         setIsLoading(false)
-        setIngredientList((prevState) => [...prevState, {id: data.name, ...ingredient}])
+        dispatch({
+          type: 'ADD',
+          payload: {
+            ingredient: {id: data.name, ...ingredient},
+          },
+        })
       })
       .catch((err) => {
         console.log('Error: ', err)
@@ -38,9 +56,12 @@ const Ingredients = () => {
     })
       .then(() => {
         setIsLoading(false)
-        setIngredientList((prevState) =>
-          prevState.filter((ing) => ingredientId !== ing.id)
-        )
+        dispatch({
+          type: 'DELETE',
+          payload: {
+            id: ingredientId,
+          },
+        })
       })
       .catch((err) => {
         console.log('Error: ', err)
@@ -52,7 +73,12 @@ const Ingredients = () => {
   }
 
   const filteredIngredientsHandler = useCallback((filteredIngredients) => {
-    setIngredientList(filteredIngredients)
+    dispatch({
+      type: 'SET',
+      payload: {
+        ingredients: filteredIngredients,
+      },
+    })
   }, [])
 
   const clearErrorHandler = () => {

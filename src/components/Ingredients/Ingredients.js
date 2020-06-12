@@ -18,13 +18,30 @@ const ingredientReducer = (currentIngredients, action) => {
   }
 }
 
+const httpReducer = (currentHttpState, action) => {
+  switch (action.type) {
+    case 'SEND':
+      return {loading: true, error: null}
+    case 'SUCCESS':
+      return {...currentHttpState, loading: false}
+    case 'FAILURE':
+      return {loading: false, error: action.payload.errorMessage}
+    case 'CLEAR':
+      return {...currentHttpState, error: null}
+    default:
+      throw new Error('Should not get there!')
+  }
+}
+
 const Ingredients = () => {
   const [ingredientList, dispatch] = useReducer(ingredientReducer, [])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState()
+  const [httpState, dispatchHttp] = useReducer(httpReducer, {
+    loading: false,
+    error: null,
+  })
 
   const addIngredientHandler = (ingredient) => {
-    setIsLoading(true)
+    dispatchHttp({type: 'SEND'})
     fetch('https://react-burger-tio.firebaseio.com/stock.json', {
       method: 'POST',
       body: JSON.stringify(ingredient),
@@ -32,7 +49,7 @@ const Ingredients = () => {
     })
       .then((res) => {
         const data = res.json()
-        setIsLoading(false)
+        dispatchHttp({type: 'SUCCESS'})
         dispatch({
           type: 'ADD',
           payload: {
@@ -42,20 +59,17 @@ const Ingredients = () => {
       })
       .catch((err) => {
         console.log('Error: ', err)
-        // even if there are two synchronous set state  React will batch them
-        // so that it re-renders the component only once
-        setError(err.message)
-        setIsLoading(false)
+        dispatchHttp({type: 'FAILURE', payload: {errorMessage: err.message}})
       })
   }
 
   const removeIngredientHandler = (ingredientId) => {
-    setIsLoading(true)
+    dispatchHttp({type: 'SEND'})
     fetch(`https://react-burger-tio.firebaseio.com/stock/${ingredientId}.json`, {
       method: 'DELETE',
     })
       .then(() => {
-        setIsLoading(false)
+        dispatchHttp({type: 'SUCCESS'})
         dispatch({
           type: 'DELETE',
           payload: {
@@ -65,10 +79,7 @@ const Ingredients = () => {
       })
       .catch((err) => {
         console.log('Error: ', err)
-        // even if there are two synchronous set state  React will batch them
-        // so that it re-renders the component only once
-        setError(err.message)
-        setIsLoading(false)
+        dispatchHttp({type: 'FAILURE', payload: {errorMessage: err.message}})
       })
   }
 
@@ -82,13 +93,18 @@ const Ingredients = () => {
   }, [])
 
   const clearErrorHandler = () => {
-    setError(null)
+    dispatchHttp({type: 'CLEAR'})
   }
 
   return (
     <div className="App">
-      {error && <ErrorModal onClose={clearErrorHandler}>{error}</ErrorModal>}
-      <IngredientForm onAddIngredient={addIngredientHandler} loading={isLoading} />
+      {httpState.error && (
+        <ErrorModal onClose={clearErrorHandler}>{httpState.error}</ErrorModal>
+      )}
+      <IngredientForm
+        onAddIngredient={addIngredientHandler}
+        loading={httpState.loading}
+      />
 
       <section>
         <Search onLoadIngredients={filteredIngredientsHandler} />

@@ -1,9 +1,10 @@
-import React, {useReducer, useCallback, useMemo} from 'react'
+import React, {useReducer, useCallback, useMemo, useEffect} from 'react'
 
 import IngredientForm from './IngredientForm'
 import IngredientList from './IngredientList'
 import Search from './Search'
 import ErrorModal from '../UI/ErrorModal'
+import useHttp from '../../hooks/http'
 
 const ingredientReducer = (currentIngredients, action) => {
   switch (action.type) {
@@ -18,70 +19,51 @@ const ingredientReducer = (currentIngredients, action) => {
   }
 }
 
-const httpReducer = (currentHttpState, action) => {
-  switch (action.type) {
-    case 'SEND':
-      return {loading: true, error: null}
-    case 'SUCCESS':
-      return {...currentHttpState, loading: false}
-    case 'FAILURE':
-      return {loading: false, error: action.payload.errorMessage}
-    case 'CLEAR':
-      return {...currentHttpState, error: null}
-    default:
-      throw new Error('Should not get there!')
-  }
-}
-
 const Ingredients = () => {
   const [ingredientList, dispatch] = useReducer(ingredientReducer, [])
-  const [httpState, dispatchHttp] = useReducer(httpReducer, {
-    loading: false,
-    error: null,
-  })
+  const {isLoading, error, data, sendRequest, reqExtra, reqIdentifier, clear} = useHttp()
 
-  const addIngredientHandler = useCallback((ingredient) => {
-    dispatchHttp({type: 'SEND'})
-    fetch('https://react-burger-tio.firebaseio.com/stock.json', {
-      method: 'POST',
-      body: JSON.stringify(ingredient),
-      headers: {'Content-Type': 'application/json'},
-    })
-      .then((res) => {
-        const data = res.json()
-        dispatchHttp({type: 'SUCCESS'})
-        dispatch({
-          type: 'ADD',
-          payload: {
-            ingredient: {id: data.name, ...ingredient},
-          },
-        })
+  useEffect(() => {
+    if (!isLoading && !error && reqIdentifier === 'REMOVE_INGREDIENT') {
+      dispatch({
+        type: 'DELETE',
+        payload: {id: reqExtra},
       })
-      .catch((err) => {
-        console.log('Error: ', err)
-        dispatchHttp({type: 'FAILURE', payload: {errorMessage: err.message}})
+    } else if (!isLoading && !error && reqIdentifier === 'ADD_INGREDIENT') {
+      dispatch({
+        type: 'ADD',
+        payload: {
+          ingredient: {id: data.name, ...reqExtra},
+        },
       })
-  }, [])
+    }
+  }, [data, error, isLoading, reqExtra, reqIdentifier])
 
-  const removeIngredientHandler = useCallback((ingredientId) => {
-    dispatchHttp({type: 'SEND'})
-    fetch(`https://react-burger-tio.firebaseio.com/stock/${ingredientId}.json`, {
-      method: 'DELETE',
-    })
-      .then(() => {
-        dispatchHttp({type: 'SUCCESS'})
-        dispatch({
-          type: 'DELETE',
-          payload: {
-            id: ingredientId,
-          },
-        })
-      })
-      .catch((err) => {
-        console.log('Error: ', err)
-        dispatchHttp({type: 'FAILURE', payload: {errorMessage: err.message}})
-      })
-  }, [])
+  const addIngredientHandler = useCallback(
+    (ingredient) => {
+      sendRequest(
+        'https://react-burger-tio.firebaseio.com/stock.json',
+        'POST',
+        JSON.stringify(ingredient),
+        ingredient,
+        'ADD_INGREDIENT'
+      )
+    },
+    [sendRequest]
+  )
+
+  const removeIngredientHandler = useCallback(
+    (ingredientId) => {
+      sendRequest(
+        `https://react-burger-tio.firebaseio.com/stock/${ingredientId}.json`,
+        'DELETE',
+        null,
+        ingredientId,
+        'REMOVE_INGREDIENT'
+      )
+    },
+    [sendRequest]
+  )
 
   const filteredIngredientsHandler = useCallback((filteredIngredients) => {
     dispatch({
@@ -93,8 +75,8 @@ const Ingredients = () => {
   }, [])
 
   const clearErrorHandler = useCallback(() => {
-    dispatchHttp({type: 'CLEAR'})
-  }, [])
+    clear()
+  }, [clear])
 
   // example of useMemo however in this case is preferred React.memo
   const ingredientListComponent = useMemo(
@@ -109,13 +91,8 @@ const Ingredients = () => {
 
   return (
     <div className="App">
-      {httpState.error && (
-        <ErrorModal onClose={clearErrorHandler}>{httpState.error}</ErrorModal>
-      )}
-      <IngredientForm
-        onAddIngredient={addIngredientHandler}
-        loading={httpState.loading}
-      />
+      {error && <ErrorModal onClose={clear}>{error}</ErrorModal>}
+      <IngredientForm onAddIngredient={addIngredientHandler} loading={isLoading} />
 
       <section>
         <Search onLoadIngredients={filteredIngredientsHandler} />

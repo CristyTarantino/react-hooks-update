@@ -1,9 +1,10 @@
 import React, {useState} from 'react'
 
 import Card from '../UI/Card'
+import LoadingIndicator from '../UI/LoadingIndicator'
 import styles from './IngredientForm.module.scss'
 
-const IngredientForm = ({title, amount, onAddIngredient}) => {
+const IngredientForm = ({title, amount, onAddIngredient, loading}) => {
   const [inputTitle, setInputTitle] = useState(title || '')
   const [inputAmount, setInputAmount] = useState(amount || '')
 
@@ -36,6 +37,7 @@ const IngredientForm = ({title, amount, onAddIngredient}) => {
           </div>
           <div className={styles['ingredient-form__actions']}>
             <button type="submit">Add Ingredient</button>
+            {loading && <LoadingIndicator />}
           </div>
         </form>
       </Card>

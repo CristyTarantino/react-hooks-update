@@ -1,4 +1,4 @@
-import React, {useReducer, useCallback} from 'react'
+import React, {useReducer, useCallback, useMemo} from 'react'
 
 import IngredientForm from './IngredientForm'
 import IngredientList from './IngredientList'
@@ -40,7 +40,7 @@ const Ingredients = () => {
     error: null,
   })
 
-  const addIngredientHandler = (ingredient) => {
+  const addIngredientHandler = useCallback((ingredient) => {
     dispatchHttp({type: 'SEND'})
     fetch('https://react-burger-tio.firebaseio.com/stock.json', {
       method: 'POST',
@@ -61,9 +61,9 @@ const Ingredients = () => {
         console.log('Error: ', err)
         dispatchHttp({type: 'FAILURE', payload: {errorMessage: err.message}})
       })
-  }
+  }, [])
 
-  const removeIngredientHandler = (ingredientId) => {
+  const removeIngredientHandler = useCallback((ingredientId) => {
     dispatchHttp({type: 'SEND'})
     fetch(`https://react-burger-tio.firebaseio.com/stock/${ingredientId}.json`, {
       method: 'DELETE',
@@ -81,7 +81,7 @@ const Ingredients = () => {
         console.log('Error: ', err)
         dispatchHttp({type: 'FAILURE', payload: {errorMessage: err.message}})
       })
-  }
+  }, [])
 
   const filteredIngredientsHandler = useCallback((filteredIngredients) => {
     dispatch({
@@ -92,9 +92,20 @@ const Ingredients = () => {
     })
   }, [])
 
-  const clearErrorHandler = () => {
+  const clearErrorHandler = useCallback(() => {
     dispatchHttp({type: 'CLEAR'})
-  }
+  }, [])
+
+  // example of useMemo however in this case is preferred React.memo
+  const ingredientListComponent = useMemo(
+    () => (
+      <IngredientList
+        ingredients={ingredientList}
+        onRemoveItem={removeIngredientHandler}
+      />
+    ),
+    [ingredientList, removeIngredientHandler]
+  )
 
   return (
     <div className="App">
@@ -108,10 +119,7 @@ const Ingredients = () => {
 
       <section>
         <Search onLoadIngredients={filteredIngredientsHandler} />
-        <IngredientList
-          ingredients={ingredientList}
-          onRemoveItem={removeIngredientHandler}
-        />
+        {ingredientListComponent}
       </section>
     </div>
   )

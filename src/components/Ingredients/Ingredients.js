@@ -23,8 +23,18 @@ const Ingredients = () => {
     setIngredientList((prevState) => [...prevState, {id: data.name, ...ingredient}])
   }
 
-  const removeIngredientHandler = (ingredientId) => {
-    setIngredientList((prevState) => prevState.filter((ing) => ingredientId !== ing.id))
+  const removeIngredientHandler = async (ingredientId) => {
+    await fetch(`https://react-burger-tio.firebaseio.com/stock/${ingredientId}.json`, {
+      method: 'DELETE',
+    })
+      .then(() => {
+        setIngredientList((prevState) =>
+          prevState.filter((ing) => ingredientId !== ing.id)
+        )
+      })
+      .catch((err) => {
+        console.log('Error: ', err)
+      })
   }
 
   const filteredIngredientsHandler = useCallback((filteredIngredients) => {
